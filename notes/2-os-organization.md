@@ -77,7 +77,7 @@ run as services that communicate using *IPC*. They are called *servers*
 Generally the most important things to know cut accross whether it is
 monolithic or micro kernel. Call them the atoms of every OS if you will, if you
 understand them you make the right tradeoffs to satisfy your need.
-- register/stacks
+- register and stacks
 - syscalls
 - dual mode execution
 - I/O, DMA and I/O interaction instructions
@@ -96,28 +96,32 @@ found in the `user/` directory.
 kernel source files
 | file | descriptions |
 |--------|------------------
- entry.S | first boot instructions |
- kernelvec.S | kernel trap and timer handler |
- trampoline.S | context switching from user to kernel mode |
- main.c | control initializaition of other modules during boot |
- swtch.S | thread/context switching |
- plic.c | RISC-V interrupt controller |
- trap.c | handle and return from traps and interrupts |
- vm.c | manage page tables and address spaces
- kalloc.c | physical page allocator |
- sleeplock.c | locks that yield cpu |
- spinlock.c | locks that do not yield cpu |
- proc.c | processes and scheduling |
- bio.c | disk block cache |
- console.c | keyboard and screen |
- exec.c | exec syscall |
- file.c | file descriptor |
- fs.c | filesytem |
- log.c | filesystem logging |
- pipe.c | pipe support |
- start.c | early machine boot code |
- syscall.c | syscall handler/dispatcher |
- sysfile.c | file related syscalls
- sysproc.c | process related syscalls |
- uart.c | serial port console device driver |
- virtio_disk.c | disk device driver |
+ [entry.S](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/entry.S) | first boot instructions |
+ [kernelvec.S](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/kernelvec.S) | kernel trap and timer handler |
+ [trampoline.S](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/trampoline.S) | context switching from user to kernel mode |
+ [main.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/main.c) | control initializaition of other modules during boot |
+ [swtch.S](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/swtch.S) | thread/context switching |
+ [plic.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/plic.c) | RISC-V interrupt controller |
+ [trap.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/trap.c) | handle and return from traps and interrupts |
+ [vm.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/vm.c) | manage page tables and address spaces
+ [kalloc.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/kalloc.c) | physical page allocator |
+ [sleeplock.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/sleeplock.c) | locks that yield cpu |
+ [spinlock.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/spinlock.c) | locks that do not yield cpu |
+ [proc.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/proc.c) | processes and scheduling |
+ [bio.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/bio.c) | disk block cache |
+ [console.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/console.c) | keyboard and screen |
+ [exec.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/exec.c) | exec syscall |
+ [file.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/file.c) | file descriptor |
+ [fs.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/fs.c) | filesytem |
+ [log.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/log.c) | filesystem logging |
+ [pipe.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/pipe.c) | pipe support |
+ [start.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/start.c) | early machine boot code |
+ [syscall.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/syscall.c) | syscall handler/dispatcher |
+ [sysfile.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/sysfile.c) | file related syscalls
+ [sysproc.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/sysproc.c) | process related syscalls |
+ [uart.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/uart.c) | serial port console device driver |
+ [virtio_disk.c](https://github.com/Joe-Degs/xv6-riscv/blob/joe-edits/kernel/virtio_disck.c) | disk device driver |
+
+### processes
+
+### booting up xv6: the process
