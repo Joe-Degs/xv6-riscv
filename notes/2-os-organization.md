@@ -95,29 +95,29 @@ found in the `user/` directory.
 
 kernel source files
 | file | descriptions |
---------------------------
-| entry.S | first boot instructions |
-| kernelvec.S | kernel trap and timer handler |
-| trampoline.S | context switching from user to kernel mode |
-| main.c | control initializaition of other modules during boot |
-| swtch.S | thread/context switching |
-| plic.c | RISC-V interrupt controller |
-| trap.c | handle and return from traps and interrupts |
-| vm.c | manage page tables and address spaces
-| kalloc.c | physical page allocator |
-| sleeplock.c | locks that yield cpu |
-| spinlock.c | locks that do not yield cpu |
-| proc.c | processes and scheduling |
-| bio.c | disk block cache |
-| console.c | keyboard and screen |
-| exec.c | exec syscall |
-| file.c | file descriptor |
-| fs.c | filesytem |
-| log.c | filesystem logging |
-| pipe.c | pipe support |
-| start.c | early machine boot code |
-| syscall.c | syscall handler/dispatcher |
-| sysfile.c | file related syscalls
-| sysproc.c | process related syscalls |
-| uart.c | serial port console device driver |
-| virtio_disk.c | disk device driver |
+|--------|------------------
+ entry.S | first boot instructions |
+ kernelvec.S | kernel trap and timer handler |
+ trampoline.S | context switching from user to kernel mode |
+ main.c | control initializaition of other modules during boot |
+ swtch.S | thread/context switching |
+ plic.c | RISC-V interrupt controller |
+ trap.c | handle and return from traps and interrupts |
+ vm.c | manage page tables and address spaces
+ kalloc.c | physical page allocator |
+ sleeplock.c | locks that yield cpu |
+ spinlock.c | locks that do not yield cpu |
+ proc.c | processes and scheduling |
+ bio.c | disk block cache |
+ console.c | keyboard and screen |
+ exec.c | exec syscall |
+ file.c | file descriptor |
+ fs.c | filesytem |
+ log.c | filesystem logging |
+ pipe.c | pipe support |
+ start.c | early machine boot code |
+ syscall.c | syscall handler/dispatcher |
+ sysfile.c | file related syscalls
+ sysproc.c | process related syscalls |
+ uart.c | serial port console device driver |
+ virtio_disk.c | disk device driver |
