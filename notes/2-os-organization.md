@@ -94,7 +94,6 @@ Kernel code can be found in the `kernel/` directory and user level code can be
 found in the `user/` directory.
 
 kernel source files
-
 | file | descriptions |
 --------------------------
 | entry.S | first boot instructions |

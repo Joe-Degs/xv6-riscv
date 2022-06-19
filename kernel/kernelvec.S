@@ -4,10 +4,31 @@
         #
         # push all registers, call kerneltrap(), restore, return.
         #
+
+//
+
 .globl kerneltrap
 .globl kernelvec
 .align 4
 kernelvec:
+// Joe:
+//  kernelvec is executed when the kernel is trapped from inside of itself. 
+//  when an interrupt, exception, trap happens from inside the kernel this
+//  routine is triggered.
+//  To handle such cases the kernel has to save all the unpriviledged registers.
+//  then handover control to the kernel trap handler, in this case by calling
+//  the "kerneltrap" routine. Find the file in trap.c
+//
+		// saving 32 64 bit (8 bytes) registers into memory.
+		//   Memory is byte addressable, and it grows downwards. To make space
+		//   in memory means to substract from the stack pointer (sp)
+		//   -> 32 register, 8 bytes each = (32 * 8) = 256 space in memory to
+		//   save all of it.
+		//   
+		//   function calls follow similar pattern except functions don't have
+		//   to save all registers to do anything.
+		//
+		//
         // make room to save registers.
         addi sp, sp, -256
 
@@ -44,6 +65,12 @@ kernelvec:
         sd t5, 232(sp)
         sd t6, 240(sp)
 
+	// Joe:
+	// now call the trap handler, it is the function that knows where to find
+	// the specific ISR (interrupt service routine) to handle the
+	// interrupt,trap,exception that just happened.
+	//
+	//
 	// call the C trap handler in trap.c
         call kerneltrap
 
@@ -51,6 +78,16 @@ kernelvec:
         ld ra, 0(sp)
         ld sp, 8(sp)
         ld gp, 16(sp)
+
+		// TODO(Joe)
+		// they are not saving the "tp" register. why????????
+		// I think the tp register is the thread pointer or something and it
+		// effectively hold the id of the current thread executing. What is the
+		// specific reason why it is not been restored over here. I have to
+		// investigate further.
+		//
+		// -> the "tp" holds a pointer to the TLS (thread local storage)
+		//
         // not this, in case we moved CPUs: ld tp, 24(sp)
         ld t0, 32(sp)
         ld t1, 40(sp)
