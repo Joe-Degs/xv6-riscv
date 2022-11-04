@@ -84,6 +84,8 @@ stat(const char *n, struct stat *st)
   return r;
 }
 
+// why would anybody write code like this?????
+// yikes this whole file is just full of pointer kungfu
 int
 atoi(const char *s)
 {
