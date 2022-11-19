@@ -26,6 +26,7 @@ struct cpu {
   int intena;                 // Were interrupts enabled before push_off()?
 };
 
+// JOE:
 extern struct cpu cpus[NCPU];
 
 // per-process data for the trap handling code in trampoline.S.
@@ -80,8 +81,28 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
+// JOE:
+// process state, used to signify the current state of the process in memory.
+// the scheduler takes care of keeping the state of the process. the state
+// if stored in the process control block.
+//
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+// JOE:
+// the proceess control block. datastructure for per-process state. it keeps
+// track of register state, process memory state, process file info and other
+// cpu related accounting things.
+// - the kernel is mapped on top of the virtual address space of every process,
+// the kernel stack.
+// - there is also datastructure for keeping execution context.
+// - the state is the states that processes go through throughout its lifecycle.
+// - open files are kept in the PCB too
+// - the process is kept in some queue by the scheduler and then timeslices them
+// and swaps them in and out of memory.
+// - scheduler puts the processes in queues called process queues for each state
+// and action that needs to be taken for the state. there are job queues, schduling
+// queues, device queues.
+//
 // Per-process state
 struct proc {
   struct spinlock lock;
