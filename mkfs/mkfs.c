@@ -134,6 +134,20 @@ main(int argc, char *argv[])
       shortname = argv[i] + 5;
     else
       shortname = argv[i];
+
+    if (index(shortname, '/') != 0) {
+      int len = strlen(argv[i]);
+      int und = -1;
+      for (int ii = len-1; ii >= 0; ii--) {
+        if (argv[i][ii] == '_') {
+          und = ii;
+          break;
+        }
+      }
+      if (und != -1) {
+        shortname  = argv[i] + und;
+      }
+    }
     
     assert(index(shortname, '/') == 0);
 
