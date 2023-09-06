@@ -29,6 +29,7 @@ main()
     fileinit();      // file table
     virtio_disk_init(); // emulated hard disk
     userinit();      // first user process
+    printf("main: init process started\n");
     __sync_synchronize();
     started = 1;
   } else {
@@ -41,5 +42,6 @@ main()
     plicinithart();   // ask PLIC for device interrupts
   }
 
-  scheduler();        
+  printf("main: about to enter scheduler\n");
+  scheduler();
 }

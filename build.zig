@@ -14,6 +14,10 @@ const optimize = builtin.Mode.ReleaseSmall;
 
 pub fn build(b: *std.Build) !void {
     const want_gdb = b.option(bool, "gdb", "Enable the QEMU stub for GDB") orelse false;
+    const num_cpu = b.option(usize, "ncpu", "Number of CPUs to use") orelse 3;
+    const gcc_mkfs = b.option(bool, "gcc-mkfs", "Build mkfs with gcc") orelse false;
+
+    const bin_dir = b.pathJoin(&[_][]const u8{ "zig-out", "bin" });
 
     // kernel/kernel
     const kernel = b.addExecutable(.{
@@ -119,24 +123,56 @@ pub fn build(b: *std.Build) !void {
     }
 
     // mkfs/mkfs
-    const mkfs = b.addExecutable(.{ .name = "mkfs", .target = b.standardTargetOptions(.{}), .optimize = b.standardOptimizeOption(.{}) });
+    const mkfs = b.addExecutable(.{
+        .name = "mkfs",
+        .target = b.standardTargetOptions(.{}),
+        .optimize = b.standardOptimizeOption(.{}),
+    });
     mkfs.addCSourceFile(b.pathJoin(&[_][]const u8{ "mkfs", "mkfs.c" }), &[_][]const u8{
-        "-Wall", "-Werror", "-I.",
+        "-Wall", "-Werror", "-Wreturn-type", "-I.",
     });
     mkfs.linkLibC();
     b.installArtifact(mkfs);
 
-    const bin_dir = b.pathJoin(&[_][]const u8{ "zig-out", "bin" });
+    // use gcc to compile mkfs because we are getting a illegal instruction
+    // when we compile with the default toolchain in zig
+    var gcc_build_mkfs: *std.Build.Step.Run = undefined;
+    const mkfs_bin = b.pathJoin(&[_][]const u8{ bin_dir, "mkfs" });
+    if (gcc_mkfs) {
+        var build_args = std.ArrayList([]const u8).init(b.allocator);
+        try build_args.appendSlice(&[_][]const u8{
+            "gcc",
+            "-Wall",
+            "-Werror",
+            "-I.",
+            "-o",
+            mkfs_bin,
+            "mkfs/mkfs.c",
+        });
+        gcc_build_mkfs = b.addSystemCommand(build_args.items);
+    }
+
     const image_path = b.pathJoin(&[_][]const u8{ bin_dir, "fs.img" });
 
     const mk_img = b.step("fs.img", "Create the filesytem image");
-    const all_programs = zig_programs ++ user_programs;
-    var programs = std.ArrayList([]const u8).init(b.allocator);
-    try programs.appendSlice(&[_][]const u8{ b.pathFromRoot(b.pathJoin(&[_][]const u8{ "mkfs", "mkfs" })), image_path, "README" });
-    inline for (all_programs) |prog| try programs.append(b.pathJoin(&[_][]const u8{ bin_dir, "_" ++ prog }));
-    const run_mkfs = b.addSystemCommand(programs.items);
+    var mkfs_cmd = std.ArrayList([]const u8).init(b.allocator);
+    try mkfs_cmd.appendSlice(&[_][]const u8{
+        mkfs_bin,
+        image_path,
+        "README",
+    });
+    inline for (zig_programs ++ user_programs) |prog| {
+        try mkfs_cmd.append(b.pathJoin(&[_][]const u8{ bin_dir, "_" ++ prog }));
+    }
+    const run_mkfs = b.addSystemCommand(mkfs_cmd.items);
+    if (gcc_mkfs) {
+        run_mkfs.step.dependOn(&gcc_build_mkfs.step);
+    } else {
+        run_mkfs.step.dependOn(&mkfs.step);
+    }
     mk_img.dependOn(&run_mkfs.step);
-    run_mkfs.step.dependOn(&mkfs.step);
+
+    const kernel_bin_dir = b.pathJoin(&[_][]const u8{ bin_dir, "kernel" });
 
     const qemu = b.step("qemu", "Run OS in qemu");
     var qemu_args = std.ArrayList([]const u8).init(b.allocator);
@@ -147,11 +183,11 @@ pub fn build(b: *std.Build) !void {
         "-bios",
         "none",
         "-kernel",
-        b.pathJoin(&[_][]const u8{ bin_dir, "kernel" }),
+        kernel_bin_dir,
         "-m",
         "128M",
         "-smp",
-        "3",
+        b.fmt("{d}", .{num_cpu}),
         "-nographic",
         "-global",
         "virtio-mmio.force-legacy=false",
@@ -166,18 +202,23 @@ pub fn build(b: *std.Build) !void {
             \\set confirm off
             \\set architecture riscv:rv64
             \\target remote 127.0.0.1:{d}
-            \\symbol-file zig-out/bin/kernel
+            \\symbol-file {s}
             \\set disassemble-next-line auto
             \\set riscv use-compressed-breakpoints yes
         ;
         const file = try std.fs.createFileAbsolute(b.pathFromRoot(".gdbinit"), .{});
         defer file.close();
-        try file.writeAll(b.fmt(template, .{port}));
+        try file.writeAll(b.fmt(template, .{ port, kernel_bin_dir }));
         try qemu_args.appendSlice(&[_][]const u8{ "-S", "-gdb", b.fmt("tcp::{d}", .{port}) });
+        std.debug.print("GdbStub -> tcp::{d}\n", .{port});
     }
     const run_qemu = b.addSystemCommand(qemu_args.items);
     qemu.dependOn(&run_qemu.step);
-    qemu.dependOn(&mkfs.step);
+    if (gcc_mkfs) {
+        run_qemu.step.dependOn(&gcc_build_mkfs.step);
+    } else {
+        run_qemu.step.dependOn(&mkfs.step);
+    }
     run_qemu.step.dependOn(&run_mkfs.step);
 }
 
