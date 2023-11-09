@@ -16,14 +16,23 @@ pub fn build(b: *std.Build) !void {
     const want_gdb = b.option(bool, "gdb", "Enable the QEMU stub for GDB") orelse false;
     const num_cpu = b.option(usize, "ncpu", "Number of CPUs to use") orelse 3;
     const gcc_mkfs = b.option(bool, "gcc-mkfs", "Build mkfs with gcc") orelse false;
-
+    const kernel_optimize = b.option(
+        builtin.Mode,
+        "K",
+        "Optimization level of kernel",
+    ) orelse .ReleaseFast;
+    const user_optimize = b.option(
+        builtin.Mode,
+        "U",
+        "Optimization level of userspace programs",
+    ) orelse .ReleaseSmall;
     const bin_dir = b.pathJoin(&[_][]const u8{ "zig-out", "bin" });
 
     // kernel/kernel
     const kernel = b.addExecutable(.{
         .name = "kernel",
         .target = target,
-        .optimize = builtin.Mode.ReleaseFast,
+        .optimize = kernel_optimize,
     });
     kernel.link_z_max_page_size = 4096;
     kernel.setLinkerScriptPath(.{ .path = b.pathJoin(&[_][]const u8{ "kernel", "kernel.ld" }) });
@@ -84,7 +93,7 @@ pub fn build(b: *std.Build) !void {
     const user_lib = b.addStaticLibrary(.{
         .name = "user",
         .target = target,
-        .optimize = optimize,
+        .optimize = user_optimize,
     });
     user_lib.addIncludePath("kernel");
     user_lib.addCSourceFiles(&cdeps, &cflags);
