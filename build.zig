@@ -21,12 +21,16 @@ pub fn build(b: *std.Build) !void {
         "K",
         "Optimization level of kernel",
     ) orelse .ReleaseFast;
+    std.debug.print("kernel optimization level is {s}\n", .{@tagName(kernel_optimize)});
     const user_optimize = b.option(
         builtin.Mode,
         "U",
         "Optimization level of userspace programs",
     ) orelse .ReleaseSmall;
-    const bin_dir = b.pathJoin(&[_][]const u8{ "zig-out", "bin" });
+    std.debug.print("user programs optimization level is {s}\n", .{@tagName(user_optimize)});
+    const dir_name = b.option([]const u8, "B", "Directory for the binary artifacts relative to zig-out") orelse "bin";
+    const bin_dir = b.pathJoin(&[_][]const u8{ "zig-out", dir_name });
+    std.debug.print("writing build artifacts to {s}\n", .{bin_dir});
 
     // kernel/kernel
     const kernel = b.addExecutable(.{
@@ -36,15 +40,15 @@ pub fn build(b: *std.Build) !void {
     });
     kernel.link_z_max_page_size = 4096;
     kernel.setLinkerScriptPath(.{ .path = b.pathJoin(&[_][]const u8{ "kernel", "kernel.ld" }) });
-    kernel.addIncludePath("kernel");
+    kernel.addIncludePath(.{ .path = "kernel" });
     for (kernel_sources) |ksrc| {
         var path = b.pathJoin(&.{ "kernel", ksrc });
         var split = std.mem.splitBackwardsScalar(u8, ksrc, '.');
         if (std.mem.eql(u8, split.first(), "S")) {
-            kernel.addAssemblyFile(path);
+            kernel.addAssemblyFile(.{ .path = path });
             continue;
         }
-        kernel.addCSourceFile(path, &cflags);
+        kernel.addCSourceFile(.{ .file = .{ .path = path }, .flags = &cflags });
     }
     b.installArtifact(kernel);
 
@@ -57,13 +61,15 @@ pub fn build(b: *std.Build) !void {
         .optimize = builtin.Mode.ReleaseSmall,
     });
     initcode.link_z_max_page_size = 4096;
-    initcode.entry_symbol_name = "start";
+    initcode.entry = .{ .symbol_name = "start" };
     initcode.strip = true;
     initcode.code_model = .medium;
     initcode.stack_protector = false;
     initcode.pie = false;
-    initcode.addIncludePath("kernel");
-    initcode.addAssemblyFile(b.pathJoin(&[_][]const u8{ "user", "initcode.S" }));
+    initcode.addIncludePath(.{ .path = "kernel" });
+    initcode.addAssemblyFile(.{
+        .path = b.pathJoin(&[_][]const u8{ "user", "initcode.S" }),
+    });
     b.installArtifact(initcode);
 
     const objcopy = initcode.addObjCopy(.{
@@ -78,7 +84,7 @@ pub fn build(b: *std.Build) !void {
     // build userspace programs
     const usys_source = blk: {
         var code: u8 = undefined;
-        const usys_contents = b.execAllowFail(
+        const usys_contents = b.runAllowFail(
             &[_][]const u8{
                 "perl",
                 b.pathFromRoot("user/usys.pl"),
@@ -95,9 +101,9 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = user_optimize,
     });
-    user_lib.addIncludePath("kernel");
-    user_lib.addCSourceFiles(&cdeps, &cflags);
-    user_lib.addAssemblyFileSource(usys_source);
+    user_lib.addIncludePath(.{ .path = "kernel" });
+    user_lib.addCSourceFiles(.{ .files = &cdeps, .flags = &cflags });
+    user_lib.addAssemblyFile(usys_source);
     b.installArtifact(user_lib);
 
     // compile c programs
@@ -105,13 +111,15 @@ pub fn build(b: *std.Build) !void {
         const bin = b.addExecutable(.{
             .name = "_" ++ source,
             .target = target,
-            .optimize = optimize,
+            .optimize = user_optimize,
         });
         bin.link_z_max_page_size = 4096;
         bin.setLinkerScriptPath(.{ .path = b.pathJoin(&[_][]const u8{ "user", "user.ld" }) });
-        bin.addIncludePath("kernel");
-        bin.addIncludePath("user");
-        bin.addCSourceFile(b.pathJoin(&[_][]const u8{ "user", source ++ ".c" }), &cflags);
+        bin.addIncludePath(.{ .path = "kernel" });
+        bin.addIncludePath(.{ .path = "user" });
+        bin.addCSourceFile(.{ .file = .{
+            .path = b.pathJoin(&[_][]const u8{ "user", source ++ ".c" }),
+        }, .flags = &cflags });
         bin.linkLibrary(user_lib);
         b.installArtifact(bin);
     }
@@ -122,10 +130,10 @@ pub fn build(b: *std.Build) !void {
             .name = "_" ++ source,
             .root_source_file = .{ .path = b.pathJoin(&[_][]const u8{ "src", source ++ ".zig" }) },
             .target = target,
-            .optimize = optimize,
+            .optimize = user_optimize,
         });
-        bin.addIncludePath("kernel");
-        bin.addIncludePath("user");
+        bin.addIncludePath(.{ .path = "kernel" });
+        bin.addIncludePath(.{ .path = "user" });
         bin.linkLibrary(user_lib);
         bin.setLinkerScriptPath(.{ .path = b.pathJoin(&[_][]const u8{ "user", "user.ld" }) });
         b.installArtifact(bin);
@@ -137,9 +145,7 @@ pub fn build(b: *std.Build) !void {
         .target = b.standardTargetOptions(.{}),
         .optimize = b.standardOptimizeOption(.{}),
     });
-    mkfs.addCSourceFile(b.pathJoin(&[_][]const u8{ "mkfs", "mkfs.c" }), &[_][]const u8{
-        "-Wall", "-Werror", "-Wreturn-type", "-I.",
-    });
+    mkfs.addCSourceFile(.{ .file = .{ .path = b.pathJoin(&[_][]const u8{ "mkfs", "mkfs.c" }) }, .flags = &[_][]const u8{ "-Wall", "-Werror", "-Wreturn-type", "-I." } });
     mkfs.linkLibC();
     b.installArtifact(mkfs);
 
@@ -162,6 +168,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     const image_path = b.pathJoin(&[_][]const u8{ bin_dir, "fs.img" });
+    std.debug.print("writing filesystem to {s}\n", .{image_path});
 
     const mk_img = b.step("fs.img", "Create the filesytem image");
     var mkfs_cmd = std.ArrayList([]const u8).init(b.allocator);
@@ -183,6 +190,7 @@ pub fn build(b: *std.Build) !void {
 
     const kernel_bin_dir = b.pathJoin(&[_][]const u8{ bin_dir, "kernel" });
 
+    // qemu-system-riscv64 -machine virt -bios none -kernel zig-out/bin/kernel -m 128M -smp 3 -nographic -global virtio-mmio.force-legacy=false -drive file=zig-out/bin/fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
     const qemu = b.step("qemu", "Run OS in qemu");
     var qemu_args = std.ArrayList([]const u8).init(b.allocator);
     try qemu_args.appendSlice(&[_][]const u8{
