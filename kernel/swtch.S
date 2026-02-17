@@ -2,8 +2,10 @@
 #
 #   void swtch(struct context *old, struct context *new);
 # 
-# Save current registers in old. Load from new.	
+# Save current registers in old. Load from new.
 
+// this is how the swtch() routine works. swtch is used to context switch
+// between processes. The scheduler uses this to schedule process to run.
 
 .globl swtch
 swtch:
